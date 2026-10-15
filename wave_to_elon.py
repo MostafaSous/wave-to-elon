@@ -7,7 +7,8 @@ Keys: q / Esc = quit, f = fullscreen, t = test the servo without waving
 
 Gestures (up to 4 hands at once):
   wave (open hand, left-right-left)  -> servo waves + hearts
-  I-love-you sign, or two-hand heart -> floating hearts
+  two-hand heart                     -> floating hearts
+  rock on / Spider-Man (🤘 or 🤟)      -> colour burst
   thumbs up                          -> confetti rain
   peace sign                         -> sparkles
   point up (index finger)            -> rocket launch
@@ -44,7 +45,7 @@ GESTURE_GRACE = 0.3     # a gesture can drop out for this long without "ending"
 
 # MediaPipe's built-in gesture names -> ours (Closed_Fist / Thumb_Down are ignored on purpose)
 MODEL_GESTURES = {
-    "ILoveYou": "heart",
+    "ILoveYou": "rock",   # 🤟 Spider-Man sign
     "Thumb_Up": "thumbs_up",
     "Victory": "peace",
     "Pointing_Up": "point",
@@ -62,6 +63,7 @@ GESTURE_LABELS = {
     "thumbs_up": ("THUMBS UP!", (0, 215, 255)),
     "peace": ("PEACE OUT", (255, 255, 0)),
     "point": ("TO MARS!", (0, 140, 255)),
+    "rock": ("ROCK ON!", (255, 80, 200)),
 }
 
 HAND_CONNECTIONS = [
@@ -113,12 +115,21 @@ def palm_size(P):
     return np.linalg.norm(P[9] - P[0])
 
 
-def is_waving_pose(P):
-    """Open hand held up: at least 3 fingers stretched out and the fingers above the wrist."""
+def fingers_extended(P):
+    """[index, middle, ring, pinky]: True if the fingertip is clearly farther from the wrist than its middle joint."""
     def d(a, b):
         return np.linalg.norm(P[a] - P[b])
-    extended = sum(d(0, tip) > d(0, pip) * 1.1 for tip, pip in ((8, 6), (12, 10), (16, 14), (20, 18)))
-    return extended >= 3 and P[12][1] < P[0][1] - 0.5 * palm_size(P)
+    return [d(0, tip) > d(0, pip) * 1.1 for tip, pip in ((8, 6), (12, 10), (16, 14), (20, 18))]
+
+
+def is_waving_pose(P):
+    """Open hand held up: at least 3 fingers stretched out and the fingers above the wrist."""
+    return sum(fingers_extended(P)) >= 3 and P[12][1] < P[0][1] - 0.5 * palm_size(P)
+
+
+def is_rock_sign(P):
+    """🤘 index and pinky up, middle and ring folded (MediaPipe's model has no class for this one)."""
+    return fingers_extended(P) == [True, False, False, True] and P[8][1] < P[0][1] and P[20][1] < P[0][1]
 
 
 def gesture_anchor(name, P):
@@ -488,6 +499,8 @@ def main():
             for P, track, guesses in zip(hands, hand_tracks, result.gestures):
                 top = guesses[0] if guesses else None
                 vote = MODEL_GESTURES.get(top.category_name) if top and top.score >= MIN_SCORE else None
+                if vote is None and is_rock_sign(P):
+                    vote = "rock"
                 track.votes.append(vote)
 
                 waving_pose = is_waving_pose(P)
@@ -525,6 +538,9 @@ def main():
                     effects.confetti_rain(w, 120)
                 elif name == "peace":
                     effects.stars(*pos, 30, GOLDS)
+                elif name == "rock":
+                    effects.stars(*pos, 30, RAINBOW)
+                    effects.confetti_burst(*pos, 40)
             for key, (x, y) in detected.items():
                 name = key[0]
                 if name == "heart":
@@ -533,6 +549,8 @@ def main():
                     effects.confetti_rain(w, emit_count(40, dt))
                 elif name == "peace":
                     effects.stars(x, y, emit_count(12, dt), GOLDS)
+                elif name == "rock":
+                    effects.stars(x, y, emit_count(15, dt), RAINBOW)
                 elif name == "point" and now - last_rocket.get(key, -10.0) > 1.2:
                     last_rocket[key] = now
                     effects.rocket(x, y)

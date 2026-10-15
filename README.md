@@ -17,10 +17,11 @@ Keys: `f` fullscreen, `t` test the servo, `q`/Esc quit.
 | Gesture | Effect |
 |---|---|
 | 👋 Wave (open hand, left-right-left) | Servo waves + hearts + "Elon is waving back!" |
-| 🤟 I-love-you sign, or 🫶 two-hand heart | Floating hearts + "RMC LOVES YOU TOO" |
+| 🫶 Two-hand heart | Floating hearts + "RMC LOVES YOU TOO" |
 | 👍 Thumbs up | Confetti rain |
 | ✌️ Peace | Sparkles |
 | ☝️ Point up | Rocket launch |
+| 🤘 Rock on / 🤟 Spider-Man | Rainbow burst + confetti + "ROCK ON!" |
 
 Gestures are read by MediaPipe's trained Gesture Recognizer and must be held steady for a moment
 before they fire. If they're too picky or too loose, change `MIN_SCORE` / `VOTE_NEEDED` at the top of `wave_to_elon.py`.
